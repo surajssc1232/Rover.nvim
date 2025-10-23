@@ -38,4 +38,25 @@ M.show_docs = function()
 	end)
 end
 
+M.ask_question = function()
+	if is_processing or ui.is_window_open() then
+		vim.notify("Rover: Already processing a request or window is open", vim.log.levels.WARN)
+		return
+	end
+
+	vim.ui.input({ prompt = "Ask Rover: " }, function(input)
+		if not input or input == "" then
+			return
+		end
+
+		is_processing = true
+		vim.notify("\nProcessing your question...", vim.log.levels.INFO)
+
+		api.ask_question(input, function(content)
+			ui.create_docs_window(content, "general")
+			is_processing = false
+		end)
+	end)
+end
+
 return M

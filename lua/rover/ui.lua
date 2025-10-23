@@ -59,6 +59,7 @@ M.create_docs_window = function(content, language)
 			-- Add code section with language info for highlighting
 			local code_start = current_line
 			for _, line in ipairs(section.lines) do
+				-- Preserve tabs and indentation in code blocks
 				table.insert(all_lines, line)
 				current_line = current_line + 1
 			end
@@ -86,25 +87,16 @@ M.create_docs_window = function(content, language)
 
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, all_lines)
 
-	-- Find the separator line to identify description end
-	local desc_end = 0
-	for i, line in ipairs(all_lines) do
-		if line:match("^%-+$") then
-			desc_end = i - 1
-			break
-		end
-	end
-
 	-- Set buffer filetype to markdown for proper formatting
 	vim.api.nvim_buf_set_option(buf, 'filetype', 'markdown')
 
-	-- Set header colors to purple
-	vim.api.nvim_set_hl(0, 'markdownH1', { fg = '#800080' })
-	vim.api.nvim_set_hl(0, 'markdownH2', { fg = '#800080' })
-	vim.api.nvim_set_hl(0, 'markdownH3', { fg = '#800080' })
-	vim.api.nvim_set_hl(0, 'markdownH4', { fg = '#800080' })
-	vim.api.nvim_set_hl(0, 'markdownH5', { fg = '#800080' })
-	vim.api.nvim_set_hl(0, 'markdownH6', { fg = '#800080' })
+	-- Set header colors with better hierarchy
+	vim.api.nvim_set_hl(0, 'markdownH1', { fg = '#ffffff', bold = true, bg = '#303030' })
+	vim.api.nvim_set_hl(0, 'markdownH2', { fg = '#87ceeb', bold = true })
+	vim.api.nvim_set_hl(0, 'markdownH3', { fg = '#98fb98', bold = true })
+	vim.api.nvim_set_hl(0, 'markdownH4', { fg = '#dda0dd', bold = true })
+	vim.api.nvim_set_hl(0, 'markdownH5', { fg = '#f0e68c', bold = true })
+	vim.api.nvim_set_hl(0, 'markdownH6', { fg = '#ffa07a', bold = true })
 
 	-- Apply Treesitter highlighting for markdown
 	local ok = pcall(function()
@@ -130,16 +122,28 @@ M.create_docs_window = function(content, language)
 		end
 	end
 
-	-- Override description lines to white (Normal highlight)
-	for i = 0, desc_end - 1 do
-		vim.api.nvim_buf_add_highlight(buf, -1, 'Normal', i, 0, -1)
+	-- Find separator line and highlight intro text
+	local separator_line = -1
+	for i, line in ipairs(all_lines) do
+		if line:match("^%-+$") then
+			separator_line = i - 1
+			vim.api.nvim_buf_add_highlight(buf, -1, 'Comment', separator_line, 0, -1)
+			break
+		end
 	end
 
-	-- Make separator grayish (Comment highlight)
-	if desc_end > 0 then
-		vim.api.nvim_buf_add_highlight(buf, -1, 'Comment', desc_end, 0, -1)
+	-- Make intro text (before separator) white
+	if separator_line > 0 then
+		for i = 0, separator_line - 1 do
+			vim.api.nvim_buf_add_highlight(buf, -1, 'Normal', i, 0, -1)
+		end
 	end
 
+	-- Set buffer options for proper indentation and tab handling
+	vim.api.nvim_buf_set_option(buf, 'expandtab', false)
+	vim.api.nvim_buf_set_option(buf, 'tabstop', 4)
+	vim.api.nvim_buf_set_option(buf, 'shiftwidth', 4)
+	vim.api.nvim_buf_set_option(buf, 'softtabstop', 4)
 	vim.api.nvim_buf_set_option(buf, 'modifiable', false)
 	vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
 
@@ -168,9 +172,11 @@ M.create_docs_window = function(content, language)
 
 	local win = vim.api.nvim_open_win(buf, true, opts)
 
-	-- Rust-style window settings
+	-- Rust-style window settings with proper wrapping
 	vim.api.nvim_win_set_option(win, 'wrap', true)
 	vim.api.nvim_win_set_option(win, 'linebreak', true)
+	vim.api.nvim_win_set_option(win, 'breakindent', true)
+	vim.api.nvim_win_set_option(win, 'showbreak', '')
 	vim.api.nvim_win_set_option(win, 'cursorline', false)
 	vim.api.nvim_win_set_option(win, 'number', false)
 	vim.api.nvim_win_set_option(win, 'relativenumber', false)
